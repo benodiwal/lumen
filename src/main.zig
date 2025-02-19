@@ -1,6 +1,9 @@
 const std = @import("std");
 const gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const allcator = gpa.allocator();
+const math = std.math;
+
+const vec3 = @import("vec3.zig");
 
 fn createLogFile() !std.fs.File {
     return try std.fs.cwd().createFile("raytracer.log", .{ .read = true });
