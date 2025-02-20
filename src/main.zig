@@ -1,9 +1,11 @@
 const std = @import("std");
+const color = @import("color.zig");
+const vec3 = @import("vec3.zig");
+
 const gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const allcator = gpa.allocator();
 const math = std.math;
-
-const vec3 = @import("vec3.zig");
+const Color = vec3.Point3;
 
 fn createLogFile() !std.fs.File {
     return try std.fs.cwd().createFile("raytracer.log", .{ .read = true });
@@ -38,12 +40,7 @@ pub fn main() !void {
             const g = @as(f32, @floatFromInt(j)) / (image_height-1);
             const b = 0.0;
 
-            const ir = @as(u8, @intFromFloat(r * 255.999));
-            const ig = @as(u8, @intFromFloat(g * 255.999));
-            const ib = @as(u8, @intFromFloat(b * 255.999));
-
-            try stdout.print("{d} {d} {d}\n", .{ir, ig, ib});
-
+            try color.writeColor(stdout, &Color.init(r, g, b));
             pixels_written += 1;
         }
 
@@ -53,4 +50,5 @@ pub fn main() !void {
         }
     }
 
+    try log_writer.writeAll("Done\n");
 }
