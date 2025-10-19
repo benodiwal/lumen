@@ -11,28 +11,33 @@ const Point3 = vec3.Point3;
 const Vec3 = vec3.Vec3;
 const Ray = ray.Ray;
 
-fn hit_sphere(center: *const Point3, radius: f64, r: *const Ray, log_writer: anytype) !bool {
-    const oc = r.origin().*.sub(center.*);
-    const a = Vec3.dot(r.direction().*, r.direction().*);
-
-    const b = -2.0 * Vec3.dot(r.direction().*, oc);
-    const c = Vec3.dot(oc, oc) - radius*radius;
-    const discriminant = b*b - 4.0*a*c;
-
-    try log_writer.print("--- Discriminant: {d}\n", .{discriminant});
-
-    return (discriminant >= 0);
+fn hit_sphere(center: Point3, radius: f64, r: Ray) f64 {
+    const oc = center.sub(r.origin());
+    const a = Vec3.dot(r.direction(), r.direction());
+    
+    const half_b = Vec3.dot(oc, r.direction());
+    const c = Vec3.dot(oc, oc) - radius * radius;
+    const discriminant = half_b * half_b - a * c;
+    
+    if (discriminant < 0) {
+        return -1.0;
+    } else {
+        return (half_b - @sqrt(discriminant)) / a;
+    }
 }
 
-fn colorRay(r: * const Ray, log_writer: anytype) !Color {
-    var sphere_center = Point3.init(0.0, 0.0, -1.0);
-    if (try hit_sphere(&sphere_center, 0.5, r, log_writer)) {
-        return Color.init(1.0, 0.0, 0.0);
+fn colorRay(r: Ray) Color {
+    const sphere_center = Point3.init(0.0, 0.0, -1.0);
+    const t = hit_sphere(sphere_center, 0.5, r);
+    
+    if (t > 0.0) {
+        const N = r.at(t).sub(sphere_center).unit_vector();
+        return Color.init(N.x() + 1.0, N.y() + 1.0, N.z() + 1.0).scale(0.5);
     }
-
+    
     const unit_direction = r.direction().unit_vector();
     const a = 0.5 * (unit_direction.y() + 1.0);
-    return Color.init(1.0, 1.0, 1.0).scale(1.0-a).add(Color.init(0.5, 0.7, 1.0).scale(a));
+    return Color.init(1.0, 1.0, 1.0).scale(1.0 - a).add(Color.init(0.5, 0.7, 1.0).scale(a));
 }
 
 fn createLogFile() !std.fs.File {
@@ -84,7 +89,6 @@ pub fn main() !void {
     try ppmFileHeader(stdout, image_width, image_height);
 
     var pixels_written: usize = 0;
-    const total_pixels = image_width * image_height;
 
     for (0..image_height) |j| {
         try log_writer.print("Processing row {d}/{d}\n", .{j+1, image_height});
@@ -92,19 +96,11 @@ pub fn main() !void {
         for (0..image_width) |i| {
             const pixel_center = pixel00_loc.add(pixel_delta_u.scale(@floatFromInt(i))).add(pixel_delta_v.scale(@floatFromInt(j)));
             const ray_direction = pixel_center.sub(camera_center);
-            const r = Ray.init(&camera_center, &ray_direction);
-            const pixel_color = try colorRay(&r, log_writer);
+            const r = Ray.init(camera_center, ray_direction);
+            const pixel_color = colorRay(r);
 
             try color.writeColor(stdout, &pixel_color);
             pixels_written += 1;
         }
-
-        // Logging Progress
-        if (j % 25 == 0) {
-            const progress = @as(f32, @floatFromInt(pixels_written)) / @as(f32, @floatFromInt(total_pixels)) * 100;
-            try log_writer.print("Progress: {d:.2}%\n", .{progress});
-        }
     }
-
-    try log_writer.writeAll("Done\n");
 }
