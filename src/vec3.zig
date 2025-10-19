@@ -88,7 +88,7 @@ pub const Vec3 = struct {
     pub fn format(self: Vec3, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = fmt;
         _ = options;
-        try writer.print("{d} {d} {d}", .{self.e[0], .self.e[1], .self.e[2]});
+        try writer.print("{d} {d} {d}", .{self.e[0], self.e[1], self.e[2]});
     }
 };
 

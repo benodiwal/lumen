@@ -4,14 +4,32 @@ const vec3 = @import("vec3.zig");
 const ray = @import("ray.zig");
 
 const gpa = std.heap.GeneralPurposeAllocator(.{}){};
-const allcator = gpa.allocator();
+const allocator = gpa.allocator();
 const math = std.math;
 const Color = vec3.Point3;
 const Point3 = vec3.Point3;
 const Vec3 = vec3.Vec3;
 const Ray = ray.Ray;
 
-fn colorRay(r: * const Ray) Color {
+fn hit_sphere(center: *const Point3, radius: f64, r: *const Ray, log_writer: anytype) !bool {
+    const oc = r.origin().*.sub(center.*);
+    const a = Vec3.dot(r.direction().*, r.direction().*);
+
+    const b = -2.0 * Vec3.dot(r.direction().*, oc);
+    const c = Vec3.dot(oc, oc) - radius*radius;
+    const discriminant = b*b - 4.0*a*c;
+
+    try log_writer.print("--- Discriminant: {d}\n", .{discriminant});
+
+    return (discriminant >= 0);
+}
+
+fn colorRay(r: * const Ray, log_writer: anytype) !Color {
+    var sphere_center = Point3.init(0.0, 0.0, -1.0);
+    if (try hit_sphere(&sphere_center, 0.5, r, log_writer)) {
+        return Color.init(1.0, 0.0, 0.0);
+    }
+
     const unit_direction = r.direction().unit_vector();
     const a = 0.5 * (unit_direction.y() + 1.0);
     return Color.init(1.0, 1.0, 1.0).scale(1.0-a).add(Color.init(0.5, 0.7, 1.0).scale(a));
@@ -69,16 +87,13 @@ pub fn main() !void {
             const pixel_center = pixel00_loc.add(pixel_delta_u.scale(@as(f64, @floatFromInt(i)))).add(pixel_delta_v.scale(@as(f64, @floatFromInt(j))));
             const ray_direction = pixel_center.sub(camera_center);
             const r = Ray.init(&camera_center, &ray_direction);
-            const pixel_color = colorRay(&r);
-
-            // const r = @as(f64, @floatFromInt(i)) / (image_width-1);
-            // const g = @as(f64, @floatFromInt(j)) / (image_height-1);
-            // const b = 0.0;
+            const pixel_color = try colorRay(&r, log_writer);
 
             try color.writeColor(stdout, &pixel_color);
             pixels_written += 1;
         }
 
+        // Logging Progress
         if (j % 25 == 0) {
             const progress = @as(f32, @floatFromInt(pixels_written)) / @as(f32, @floatFromInt(total_pixels)) * 100;
             try log_writer.print("Progress: {d:.2}%\n", .{progress});

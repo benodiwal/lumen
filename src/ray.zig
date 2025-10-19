@@ -10,7 +10,7 @@ pub const Ray = struct {
     }
 
     pub fn origin(self: Ray) *const Point3 {
-        return self.origin;
+        return self.orig;
     }
 
     pub fn direction(self: Ray) *const Vec3 {
