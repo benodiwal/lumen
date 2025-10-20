@@ -40,20 +40,11 @@ fn colorRay(r: Ray) Color {
     return Color.init(1.0, 1.0, 1.0).scale(1.0 - a).add(Color.init(0.5, 0.7, 1.0).scale(a));
 }
 
-fn createLogFile() !std.fs.File {
-    return try std.fs.cwd().createFile("raytracer.log", .{ .read = true });
-}
-
 fn ppmFileHeader(stdout: anytype, image_width: u64, image_height: u64) !void {
     try stdout.print("P3\n{d} {d}\n255\n", .{image_width, image_height});
 }
 
 pub fn main() !void {
-    const log_file = try createLogFile();
-    defer log_file.close();
-
-    const log_writer = log_file.writer();
-
     // IMAGE
     const aspect_ratio = 16.0 / 9.0;
     const image_width = 400;
@@ -83,16 +74,12 @@ pub fn main() !void {
     const viewport_upper_left = camera_center.sub(Vec3.init(0, 0, focal_length)).sub(viewport_u.div(2)).sub(viewport_v.div(2));
     const pixel00_loc = viewport_upper_left.add(pixel_delta_u.add(pixel_delta_v).scale(0.5));
 
-    try log_writer.writeAll("Starting ray tracer...\n");
-
     const stdout = std.io.getStdOut().writer();
     try ppmFileHeader(stdout, image_width, image_height);
 
     var pixels_written: usize = 0;
 
     for (0..image_height) |j| {
-        try log_writer.print("Processing row {d}/{d}\n", .{j+1, image_height});
-
         for (0..image_width) |i| {
             const pixel_center = pixel00_loc.add(pixel_delta_u.scale(@floatFromInt(i))).add(pixel_delta_v.scale(@floatFromInt(j)));
             const ray_direction = pixel_center.sub(camera_center);
