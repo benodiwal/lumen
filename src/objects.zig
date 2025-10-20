@@ -1,8 +1,9 @@
 const Vec3 = @import("vec3.zig").Vec3;
 const Point3 = @import("vec3.zig").Point3;
 const Ray = @import("ray.zig").Ray;
+const std = @import("std");
 
-const HitRecord = struct {
+pub const HitRecord = struct {
     // Hit Point
     p: Point3,
     // Surface Normal
@@ -25,22 +26,58 @@ pub const Object = struct {
 
     pub fn init(pointer: anytype) Object {
         const Ptr = @TypeOf(pointer);
-        const ptr_info = @typeInfo(Ptr);
 
         const gen = struct {
             fn hit(ptr: *anyopaque, r: Ray, t_min: f64, t_max: f64) ?HitRecord {
                 const self: Ptr = @ptrCast(@alignCast(ptr));
-                return ptr_info.Pointer.child.hit(self, r, t_min, t_max);
+                return self.hit(r, t_min, t_max);
             }
         };
 
         return .{
-            .ptr = @ptrCast(@alignCast(&pointer)),
+            .ptr = @ptrCast(@alignCast(pointer)),
             .hitFn = &gen.hit,
         };
     }
 
-    pub fn hit(self: Object, r: Ray, t_min: f64, t_max: f64) void {
-        self.hitFn(self.ptr, r, t_min, t_max);
+    pub fn hit(self: Object, r: Ray, t_min: f64, t_max: f64) ?HitRecord {
+        return self.hitFn(self.ptr, r, t_min, t_max);
+    }
+};
+
+// A collection of objects in the scene.
+pub const World = struct {
+    objects: std.ArrayList(Object),
+
+    pub fn init(allocator: std.mem.Allocator) World {
+        return World{
+            .objects = std.ArrayList(Object).init(allocator),
+        };
+    }
+
+    pub fn deinit(self: *World) void {
+        self.objects.deinit();
+    }
+
+    pub fn add(self: *World, object: Object) !void {
+        try self.objects.append(object);
+    }
+
+    pub fn clear(self: *World) void {
+        self.objects.clearRetainingCapacity();
+    }
+
+    pub fn hit(self: *World, r: Ray, t_min: f64, t_max: f64) ?HitRecord {
+        var temp_rec: ?HitRecord = null;
+        var closest_so_far = t_max;
+
+        for (self.objects.items) |object| {
+            if (object.hit(r, t_min, closest_so_far)) |rec| {
+                closest_so_far = rec.t;
+                temp_rec = rec;
+            }
+        }
+
+        return temp_rec;
     }
 };

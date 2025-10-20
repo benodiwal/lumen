@@ -17,7 +17,7 @@ pub const Sphere = struct {
     }
 
     pub fn hit(self: *Sphere, r: Ray, t_min: f64, t_max: f64) ?HitRecord {
-                const oc = r.origin().sub(self.center);
+        const oc = r.origin().sub(self.center);
         const a = Vec3.dot(r.direction(), r.direction());
         const half_b = Vec3.dot(oc, r.direction());
         const c = Vec3.dot(oc, oc) - self.radius * self.radius;
