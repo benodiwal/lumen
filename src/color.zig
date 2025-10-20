@@ -1,4 +1,4 @@
-const Color = @import("vec3.zig").Point3;
+pub const Color = @import("vec3.zig").Point3;
 
 pub fn writeColor(stdout: anytype, pixel_color: *const Color) !void {
     const r = pixel_color.x();
